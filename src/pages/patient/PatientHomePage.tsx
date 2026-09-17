@@ -4,6 +4,8 @@ import { Brain, Users, CalendarCheck, BookOpen, Compass } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { voiceEngine } from '../../services/voiceEngine';
 import { evaluatePatientVoiceInput } from '../../services/persona';
+import { generateDialogueWithLLM } from '../../services/llmService';
+import { speechService } from '../../services/speechService';
 import { VoiceOrb } from '../../components/patient/VoiceOrb';
 import { VoiceTranscript } from '../../components/patient/VoiceTranscript';
 import { EmergencyCallModal } from '../../components/patient/EmergencyCallModal';
@@ -108,36 +110,74 @@ export const PatientHomePage: React.FC = () => {
     }
   };
 
-  const handlePatientSpeech = (transcript: string) => {
-    const response = evaluatePatientVoiceInput(
+  const handlePatientSpeech = async (transcript: string) => {
+    if (!transcript || !transcript.trim()) {
+      const retryText = speechService.getRetryPrompt(currentLanguage);
+      setSahayakText(retryText);
+      voiceEngine.speak(
+        retryText,
+        currentLanguage,
+        () => setIsSpeaking(true),
+        () => setIsSpeaking(false)
+      );
+      return;
+    }
+
+    // Evaluate quick triggers / specific game subroutes
+    const navResponse = evaluatePatientVoiceInput(
       transcript,
       patient.preferredName,
       caregiver?.name || 'Priya',
       currentLanguage
     );
 
-    setSahayakText(response.spokenReply);
+    // Call dynamic LLM generation for full persona dialog
+    const llmResponse = await generateDialogueWithLLM(
+      transcript,
+      patient.preferredName,
+      caregiver?.name || 'Priya',
+      currentLanguage
+    );
 
-    if (response.detectedTone) {
-      addToneLog({
-        tone: response.detectedTone,
-        context: `Patient said: "${transcript}"`,
-        triggerDetected: response.isDistress ? 'Distress / Disorientation phrase' : undefined,
-      });
-    }
+    const isDistress = navResponse.isDistress || llmResponse.isDistress;
+    const tone = llmResponse.detectedTone || navResponse.detectedTone || 'calm';
 
-    if (response.triggerCallCaregiver) {
+    addToneLog({
+      tone,
+      context: `Patient said: "${transcript}"`,
+      triggerDetected: isDistress ? 'Distress / Disorientation phrase' : undefined,
+    });
+
+    if (isDistress || navResponse.triggerCallCaregiver || llmResponse.suggestedAction === 'call_caregiver') {
       setShowEmergencyModal(true);
     }
 
+    // Determine navigation target
+    let targetNav = navResponse.navigateTo;
+    if (!targetNav && llmResponse.suggestedAction) {
+      if (llmResponse.suggestedAction === 'navigate_games') targetNav = '/patient/games';
+      if (llmResponse.suggestedAction === 'navigate_family') targetNav = '/patient/family';
+      if (llmResponse.suggestedAction === 'navigate_routine') targetNav = '/patient/routine';
+      if (llmResponse.suggestedAction === 'navigate_journal') targetNav = '/patient/journal';
+      if (llmResponse.suggestedAction === 'navigate_house') targetNav = '/patient/house-map';
+    }
+
+    // Select spoken reply: specific game sub-route reply takes precedence, otherwise dynamic LLM reply
+    let reply = llmResponse.spokenReply;
+    if (navResponse.navigateTo && navResponse.navigateTo !== '/patient/games') {
+      reply = navResponse.spokenReply;
+    }
+
+    setSahayakText(reply);
+
     voiceEngine.speak(
-      response.spokenReply,
+      reply,
       currentLanguage,
       () => setIsSpeaking(true),
       () => {
         setIsSpeaking(false);
-        if (response.navigateTo) {
-          navigate(response.navigateTo);
+        if (targetNav) {
+          navigate(targetNav);
         }
       }
     );

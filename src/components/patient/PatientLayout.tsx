@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Phone, Clock, Home, Brain, Users, CalendarCheck, BookOpen, Compass, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { EmergencyCallModal } from './EmergencyCallModal';
+import { GlobalVoiceCompanion } from './GlobalVoiceCompanion';
 import { SupportedLanguage } from '../../types';
 
 export const PatientLayout: React.FC = () => {
@@ -138,9 +139,12 @@ export const PatientLayout: React.FC = () => {
       </nav>
 
       {/* 3. Main Outlet Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 pb-28">
         <Outlet />
       </main>
+
+      {/* 4. Global Persistent Voice Companion (Always accessible across patient screens) */}
+      <GlobalVoiceCompanion />
 
       {/* Emergency Call Modal */}
       <EmergencyCallModal

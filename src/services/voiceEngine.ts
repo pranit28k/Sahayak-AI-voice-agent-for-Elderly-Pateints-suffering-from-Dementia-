@@ -1,5 +1,8 @@
-// Web Speech API Voice Engine for Sahayak
-// Provides speech synthesis (calm, slow cadence) and speech recognition (STT)
+// Voice Engine for Sahayak
+// Coordinates speechService (Sarvam AI for Indic languages, browser fallback for English)
+// and handles audio listeners with graceful retry handling.
+
+import { speechService } from './speechService';
 
 export interface VoiceEngineListener {
   onTranscript?: (transcript: string, isFinal: boolean) => void;
@@ -9,16 +12,12 @@ export interface VoiceEngineListener {
 }
 
 class VoiceEngine {
-  private synth: SpeechSynthesis | null = null;
   private recognition: any = null;
   private isListening: boolean = false;
   private isSpeaking: boolean = false;
+  private hadSpeechInSession: boolean = false;
 
   constructor() {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      this.synth = window.speechSynthesis;
-    }
-
     if (typeof window !== 'undefined') {
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -34,83 +33,33 @@ class VoiceEngine {
     return this.recognition !== null;
   }
 
-  public isSynthesisSupported(): boolean {
-    return this.synth !== null;
-  }
-
   public speak(
     text: string,
     language: string = 'en',
     onStart?: () => void,
     onEnd?: () => void
   ): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.synth) {
-        onStart?.();
-        setTimeout(() => {
-          onEnd?.();
-          resolve();
-        }, 1500);
-        return;
-      }
-
-      this.stop(); // Stop any pending speech
-
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      // Dementia-friendly settings: calm, slightly slower pace
-      utterance.rate = 0.84;
-      utterance.pitch = 0.98;
-
-      // Language tag selection
-      if (language === 'hi') {
-        utterance.lang = 'hi-IN';
-      } else if (language === 'as') {
-        utterance.lang = 'as-IN'; // Fallback will use Indian accent if as-IN missing
-      } else {
-        utterance.lang = 'en-IN';
-      }
-
-      // Voice selection (prefer natural Indian English or regional voice if available)
-      const voices = this.synth.getVoices();
-      const preferredVoice = voices.find(
-        (v) =>
-          (language === 'hi' && v.lang.startsWith('hi')) ||
-          (language === 'as' && (v.lang.startsWith('as') || v.lang.startsWith('bn'))) ||
-          (language === 'en' && (v.lang === 'en-IN' || v.name.includes('India')))
-      );
-
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-
-      utterance.onstart = () => {
+    this.isSpeaking = true;
+    return speechService.synthesize(
+      text,
+      language,
+      () => {
         this.isSpeaking = true;
         onStart?.();
-      };
-
-      utterance.onend = () => {
+      },
+      () => {
         this.isSpeaking = false;
         onEnd?.();
-        resolve();
-      };
-
-      utterance.onerror = () => {
-        this.isSpeaking = false;
-        onEnd?.();
-        resolve();
-      };
-
-      this.synth.speak(utterance);
-    });
+      }
+    );
   }
 
   public stop(): void {
-    if (this.synth) {
-      this.synth.cancel();
-      this.isSpeaking = false;
-    }
+    speechService.stopAudio();
+    this.isSpeaking = false;
   }
+
+  private wasCancelledManually: boolean = false;
 
   public startListening(
     language: string = 'en',
@@ -124,6 +73,9 @@ class VoiceEngine {
     if (this.isListening) {
       this.stopListening();
     }
+
+    this.hadSpeechInSession = false;
+    this.wasCancelledManually = false;
 
     if (language === 'hi') {
       this.recognition.lang = 'hi-IN';
@@ -151,19 +103,32 @@ class VoiceEngine {
       }
 
       const spokenText = finalTranscript || interim;
-      if (spokenText) {
+      if (spokenText.trim()) {
+        this.hadSpeechInSession = true;
         callbacks.onTranscript?.(spokenText.trim(), Boolean(finalTranscript));
       }
     };
 
     this.recognition.onerror = (event: any) => {
       this.isListening = false;
+      // If error was no-speech or network and no speech was captured, handle gracefully with a spoken retry prompt
+      if (!this.hadSpeechInSession && !this.isSpeaking && event.error !== 'aborted') {
+        const retryText = speechService.getRetryPrompt(language);
+        this.speak(retryText, language);
+      }
       callbacks.onError?.(event.error || 'Speech recognition error');
     };
 
     this.recognition.onend = () => {
+      const hadSpeech = this.hadSpeechInSession;
+      const wasCancelled = this.wasCancelledManually;
       this.isListening = false;
       callbacks.onSpeechEnd?.();
+
+      if (!hadSpeech && !wasCancelled && !this.isSpeaking) {
+        const retryText = speechService.getRetryPrompt(language);
+        this.speak(retryText, language);
+      }
     };
 
     try {
@@ -176,6 +141,7 @@ class VoiceEngine {
   }
 
   public stopListening(): void {
+    this.wasCancelledManually = true;
     if (this.recognition && this.isListening) {
       try {
         this.recognition.stop();

@@ -39,6 +39,7 @@ interface AppState {
   gameResults: GameResult[];
   journalEntries: VoiceJournalEntry[];
   consent: ConsentRecord | null;
+  isGamePaused: boolean;
 
   // Actions
   loginAsDemo: () => void;
@@ -46,6 +47,7 @@ interface AppState {
   logout: () => void;
   setMode: (mode: 'caregiver' | 'patient') => void;
   setLanguage: (lang: SupportedLanguage) => void;
+  setGamePaused: (paused: boolean) => void;
   updatePatientProfile: (updates: Partial<PatientProfile>) => void;
   addFamilyMember: (member: Omit<FamilyMember, 'id'>) => void;
   updateFamilyMember: (id: string, updates: Partial<FamilyMember>) => void;
@@ -79,6 +81,7 @@ export const useAppStore = create<AppState>()(
         consentDate: new Date().toISOString(),
         consentedBy: 'Priya Sharma (Primary Caregiver)',
       },
+      isGamePaused: false,
 
       loginAsDemo: () => {
         set({
@@ -93,6 +96,7 @@ export const useAppStore = create<AppState>()(
           gameResults: SEED_GAME_RESULTS,
           journalEntries: SEED_JOURNAL_ENTRIES,
           currentLanguage: 'en',
+          isGamePaused: false,
         });
       },
 
@@ -110,7 +114,7 @@ export const useAppStore = create<AppState>()(
       },
 
       logout: () => {
-        set({ isAuthenticated: false, activeMode: 'caregiver' });
+        set({ isAuthenticated: false, activeMode: 'caregiver', isGamePaused: false });
       },
 
       setMode: (mode: 'caregiver' | 'patient') => {
@@ -122,6 +126,10 @@ export const useAppStore = create<AppState>()(
           currentLanguage: lang,
           patient: { ...state.patient, language: lang },
         }));
+      },
+
+      setGamePaused: (paused: boolean) => {
+        set({ isGamePaused: paused });
       },
 
       updatePatientProfile: (updates) => {

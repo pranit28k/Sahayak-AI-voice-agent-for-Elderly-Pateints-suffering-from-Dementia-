@@ -68,7 +68,14 @@ export interface ToneLog {
 
 export interface GameResult {
   id: string;
-  gameType: 'memory_match' | 'face_recognition';
+  gameType:
+    | 'memory_match'
+    | 'face_recognition'
+    | 'connect_dots'
+    | 'spot_difference'
+    | 'sequence_arranging'
+    | 'object_naming'
+    | 'photo_puzzle';
   timestamp: string;
   score: number;
   maxScore: number;

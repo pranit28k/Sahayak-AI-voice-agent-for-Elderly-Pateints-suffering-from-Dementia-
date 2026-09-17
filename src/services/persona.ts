@@ -68,10 +68,73 @@ export function evaluatePatientVoiceInput(
     }
   }
 
-  // 2. Navigation Intent Check
-  if (text.includes('game') || text.includes('puzzle') || text.includes('memory') || text.includes('खेल')) {
+  // 2. Specific Game Direct Launch Intents
+  if (text.includes('dot') || text.includes('connect')) {
     return {
-      spokenReply: `Let us play a gentle game together, ${patientName}.`,
+      spokenReply: `Let us connect the dots together, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/dots',
+    };
+  }
+
+  if (text.includes('difference') || text.includes('spot')) {
+    return {
+      spokenReply: `Let us spot the peaceful differences, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/spot-diff',
+    };
+  }
+
+  if (text.includes('sequence') || text.includes('order') || text.includes('arranging')) {
+    return {
+      spokenReply: `Let us arrange the daily routine steps, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/sequence',
+    };
+  }
+
+  if (text.includes('naming') || text.includes('object') || text.includes('वस्तु')) {
+    return {
+      spokenReply: `Let us name the familiar objects, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/naming',
+    };
+  }
+
+  if (text.includes('jigsaw') || text.includes('puzzle') || text.includes('पहेली')) {
+    return {
+      spokenReply: `Let us assemble the family photo puzzle, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/puzzle',
+    };
+  }
+
+  if (text.includes('memory') || text.includes('matching') || text.includes('कार्ड')) {
+    return {
+      spokenReply: `Let us play memory card matching, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/memory',
+    };
+  }
+
+  if (text.includes('face') || text.includes('who is this') || text.includes('चेहरा')) {
+    return {
+      spokenReply: `Let us recognize our loving family faces, ${patientName}.`,
+      detectedTone: 'calm',
+      isDistress: false,
+      navigateTo: '/patient/games/faces',
+    };
+  }
+
+  if (text.includes('game') || text.includes('games') || text.includes('खेल')) {
+    return {
+      spokenReply: `Let us explore our brain games hub, ${patientName}.`,
       detectedTone: 'calm',
       isDistress: false,
       navigateTo: '/patient/games',

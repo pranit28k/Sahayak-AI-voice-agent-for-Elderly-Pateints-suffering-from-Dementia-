@@ -16,6 +16,11 @@ import { PatientHomePage } from './pages/patient/PatientHomePage';
 import { GamesHubPage } from './pages/patient/GamesHubPage';
 import { MemoryGamePage } from './pages/patient/MemoryGamePage';
 import { FaceRecognitionGame } from './pages/patient/FaceRecognitionGame';
+import { ConnectDotsGame } from './pages/patient/ConnectDotsGame';
+import { SpotDifferenceGame } from './pages/patient/SpotDifferenceGame';
+import { SequenceGame } from './pages/patient/SequenceGame';
+import { ObjectNamingGame } from './pages/patient/ObjectNamingGame';
+import { PhotoPuzzleGame } from './pages/patient/PhotoPuzzleGame';
 import { PatientFamilyTreePage } from './pages/patient/PatientFamilyTreePage';
 import { VoiceJournalPage } from './pages/patient/VoiceJournalPage';
 import { RoutineTimelinePage } from './pages/patient/RoutineTimelinePage';
@@ -44,6 +49,11 @@ export const App: React.FC = () => {
           <Route path="games" element={<GamesHubPage />} />
           <Route path="games/memory" element={<MemoryGamePage />} />
           <Route path="games/faces" element={<FaceRecognitionGame />} />
+          <Route path="games/dots" element={<ConnectDotsGame />} />
+          <Route path="games/spot-diff" element={<SpotDifferenceGame />} />
+          <Route path="games/sequence" element={<SequenceGame />} />
+          <Route path="games/naming" element={<ObjectNamingGame />} />
+          <Route path="games/puzzle" element={<PhotoPuzzleGame />} />
           <Route path="family" element={<PatientFamilyTreePage />} />
           <Route path="journal" element={<VoiceJournalPage />} />
           <Route path="routine" element={<RoutineTimelinePage />} />
